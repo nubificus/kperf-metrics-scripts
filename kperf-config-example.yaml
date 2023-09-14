@@ -1,0 +1,39 @@
+service:
+  fnmp:
+    load-concurrency: 1000
+    load-duration: 100s
+    load-tool: hey
+    namespace: ktest
+    namespace-prefix: null
+    namespace-range: null
+    number-of-req: 100000
+    output: /home/iplakas/results
+    range: 0,1
+    svc-prefix: ktest
+    verbose: true
+    wait-time: 15s
+  generate:
+    batch: 10
+    concurrency: 5
+    interval: 10
+    max-scale: 0
+    min-scale: 0
+    namespace: ktest
+    namespace-prefix: null
+    namespace-range: null
+    number: 1
+    svc-prefix: ktest
+    template: /home/iplakas/cluster-depls/go-func-service.yaml
+  load:
+    load-concurrency: 50
+    load-duration: 0s
+    load-tool: hey
+    namespace: ktest
+    namespace-prefix: null
+    namespace-range: null
+    number-of-req: 100000
+    output: /home/iplakas/results-automated-script
+    range: 0,1
+    svc-prefix: ktest
+    verbose: true
+    wait-time: 15s

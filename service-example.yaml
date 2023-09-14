@@ -1,0 +1,26 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: helloworld-go-unik-native-new
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/target: '20'
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - bf
+      containers:
+      - env:
+        - name: TARGET
+          value: Go Sample v1
+        image: docker.io/plakic/hello-unik-native
+      runtimeClassName:
+
