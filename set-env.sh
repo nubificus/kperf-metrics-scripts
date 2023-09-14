@@ -1,0 +1,10 @@
+export ENDPOINT_URL=http://10.102.106.30
+export HOST_HEADER=ktest-0.ktest.knative.nbfc.io
+export SERVICE_YAML=/home/iplakas/cluster-depls/go-func-service.yaml
+export KPERF_CONFIG=/root/.config/kperf/config.yaml
+export OUTPUT_DIR=/home/iplakas/results-automated-script
+export LOAD_TESTING_BOOL=True
+export SCALE_TESTING_BOOL=False
+export FMNP_TESTING_BOOL=False
+export CSV_RES_DIR=/home/iplakas/results-automated-script
+export KSERVICE_TARGET=5
