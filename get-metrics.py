@@ -73,6 +73,35 @@ def execute_and_wait(command):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+
+#A function to delete yaml lines 
+def delete_line_from_deeply_nested_yaml(yaml_file, keys):
+    try:
+        with open(yaml_file, 'r') as file:
+            data = yaml.safe_load(file)
+
+        # Create a function to recursively delete the line based on keys
+        def delete_recursive(current_level, keys_to_delete):
+            key = keys_to_delete[0]
+            if key in current_level:
+                if len(keys_to_delete) == 1:
+                    del current_level[key]
+                else:
+                    delete_recursive(current_level[key], keys_to_delete[1:])
+
+        delete_recursive(data, keys)
+
+        with open(yaml_file, 'w') as file:
+            yaml.dump(data, file, default_flow_style=False)
+
+        print(f"Deleted the line with keys: {keys} in '{yaml_file}'.")
+    except FileNotFoundError:
+        print(f"The file '{yaml_file}' was not found.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+
+
 #A function responsible for changing yaml value
 #based on the list of "keys"
 #e.g spec.template.spec.runtimeClassName="kata"
@@ -90,7 +119,10 @@ def add_value_to_deeply_nested_yaml(yaml_file, keys, value):
         current_level[keys[-1]] = value
 
         with open(yaml_file, 'w') as file:
-            yaml.dump(data, file, default_flow_style=False)
+            if(value==""):
+                print("Probaly you should fix this stupid quick-fix, meant to force no")
+            else:
+                yaml.dump(data, file, default_flow_style=False)
 
         print(f"Added/Updated '{keys[-1]}' with value '{value}' in '{yaml_file}' under keys: {keys[:-1]}.")
     except FileNotFoundError:
@@ -98,9 +130,11 @@ def add_value_to_deeply_nested_yaml(yaml_file, keys, value):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
+#List of concurrency step
+concurrency_step_list = ["1","20","40","60","80","100"]
 
 #List of container-runtimes
-list_cont_runtime = ["kata-qemu","kata-fc","kata-rs","kata-clh","urunc","gvisor"]
+list_cont_runtime = ["","kata-qemu","kata-fc","kata-rs","kata-clh","urunc","gvisor"]
 
 print(list_cont_runtime)
 
@@ -108,10 +142,13 @@ yaml_file = service_yaml_file
 config_file = kperf_config_file
 #print service yaml
 read_and_print_yaml(yaml_file)
+
 #keys for changing runtime in service yaml
 key_list_service = ['spec','template','spec','runtimeClassName']
 #keys for changing output dir in config yaml
 key_list_config_output =['service','load','output']
+#keys for changing concurrency output
+key_list_config_concurrency =['service','load','load-concurrency']
 #keys for changing the autoscaling-dev-target
 key_list_config_target = ['spec', 'template', 'metadata','annotations','autoscaling.knative.dev/target']
 
@@ -125,29 +162,46 @@ add_value_to_deeply_nested_yaml(yaml_file,key_list_config_target,target_env)
 if(load_env and load_env.lower() == "true"):
     print("Start load phase")
 
-    #for every runtime retrive metrics for loading
-    for st in list_cont_runtime:
-        print("Load with "+st)
+    #For every concurrency step
+    for conc in concurrency_step_list:
+        print( "Set concurrency step to " +conc)
+        add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_concurrency,conc)
         #export env for kperf-output-file nameing 
-        os.environ['CONT_RUNTIME'] = st
+        os.environ['CONCURRENCY_STEP']=conc
+        time.sleep(4)
 
-        #Change service's yaml based on runtime
-        add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)
 
-        #Create new ns and generate service
-        command_to_run = "kubectl create ns ktest && kperf service generate"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
+        #For every runtime retrive metrics for loading
+        for st in list_cont_runtime:
+            print("Load with "+st)
+            #export env for kperf-output-file nameing 
+            if(st == ""):
+                os.environ['CONT_RUNTIME'] = "generic"
+                #Change service's yaml based on runtime
+                delete_line_from_deeply_nested_yaml(yaml_file, key_list_service)
 
-        #Perform Load-teasting
-        command_to_run = "kperf service load"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
+            else:
+                os.environ['CONT_RUNTIME'] = st
+                #Change service's yaml based on runtime
+                add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)
 
-        #Delete ns
-        command_to_run = "kubectl delete ns ktest"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
+
+
+
+            #Create new ns and generate service
+            command_to_run = "kubectl create ns ktest && kperf service generate"
+            execute_and_wait(command_to_run)
+            time.sleep(7)  # Wait for 7 seconds
+
+            #Perform Load-teasting
+            command_to_run = "kperf service load"
+            execute_and_wait(command_to_run)
+            time.sleep(7)  # Wait for 7 seconds
+
+            #Delete ns
+            command_to_run = "kubectl delete ns ktest"
+            execute_and_wait(command_to_run)
+            time.sleep(7)  # Wait for 7 seconds
 
 
 if (scale_env and scale_env.lower() == "true"):
@@ -158,10 +212,14 @@ if (scale_env and scale_env.lower() == "true"):
         print("Scale with "+st)
 
         #export env for kperf-output-file nameing 
-        os.environ['CONT_RUNTIME'] = st
+        if(st == ""):
+            os.environ['CONT_RUNTIME'] = "generic"
+            delete_line_from_deeply_nested_yaml(yaml_file, key_list_service)
+        else:
+            os.environ['CONT_RUNTIME'] = st
+            #Change service's yaml based on runtime
+            add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)            
 
-        #Change service's yaml based on runtime
-        add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)
 
 
         #Create new ns and generate service
@@ -187,7 +245,10 @@ if (fmnp_env and fmnp_env.lower() == "true"):
         print("Find max-num-pods with "+st)
 
         #export env for kperf-output-file nameing 
-        os.environ['CONT_RUNTIME'] = st
+        if(st == ""):
+            os.environ['CONT_RUNTIME'] = "generic"
+        else:
+            os.environ['CONT_RUNTIME'] = st
 
         #Change service's yaml based on runtime
         add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)
