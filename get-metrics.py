@@ -152,12 +152,15 @@ key_list_config_concurrency =['service','load','load-concurrency']
 key_list_config_target = ['spec', 'template', 'metadata','annotations','autoscaling.knative.dev/target']
 #keys for changing the number of services 
 key_list_ksvc_num = ['service','generate','number']
+#keys for changing the range of affected services
+key_list_load_ksvc_range = ['service','load','range']
 
 #Change config output_dir value
 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_output,output_dir)
 time.sleep(2)
 #Change target value in config
 add_value_to_deeply_nested_yaml(yaml_file,key_list_config_target,target_env)
+
 
 
 if(load_env and load_env.lower() == "true"):
@@ -170,6 +173,14 @@ if(load_env and load_env.lower() == "true"):
         #export env for number of ksvc-s
         os.environ['NUM_OF_KSVCs']= ksvc_num
         time.sleep(4)
+
+        if(len(key_list_ksvc_num)> 1 ){
+            largest_num_of_range = len(key_list_ksvc_num)
+            print("Set range in load section ..load range 0,"+largest_num_of_range)
+            add_value_to_deeply_nested_yaml(kperf_config_file,key_list_load_ksvc_range,"0,"+largest_num_of_range)
+            time.sleep(4)
+        }
+        
 
         #For every concurrency step
         for conc in concurrency_step_list:
