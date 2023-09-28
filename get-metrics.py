@@ -12,10 +12,6 @@ will run the kperf tests
 accordingly for every container-runtime
 """
 
-
-
-#Get env
-
 #The service file which knative-service will be based on
 service_yaml_file = os.environ.get('SERVICE_YAML')
 #The config file of kperf holding the values that testing is based
@@ -32,6 +28,7 @@ fmnp_env = os.environ.get('FMNP_TESTING_BOOL')
 #of each pod
 target_env = os.environ.get('KSERVICE_TARGET')
 
+
 #Print envs
 print("SERVICE_YAML:", service_yaml_file)
 print("KPERF_CONFIG:", kperf_config_file)
@@ -40,7 +37,6 @@ print("LOAD_TESTING_BOOL:", load_env)
 print("SCALE_TESTING_BOOL:", scale_env)
 print("FMNP_TESTING_BOOL:", fmnp_env)
 print("KSERVICE_TARGET:", target_env)
-
 
 #A function that reads and print yaml files
 def read_and_print_yaml(yaml_file):
@@ -133,6 +129,9 @@ def add_value_to_deeply_nested_yaml(yaml_file, keys, value):
 #List of concurrency step
 concurrency_step_list = ["1","20","40","60","80","100"]
 
+#List of number of services
+services_num_list =["1","20","40","60","80","100"]
+
 #List of container-runtimes
 list_cont_runtime = ["","kata-qemu","kata-fc","kata-rs","kata-clh","urunc","gvisor"]
 
@@ -151,57 +150,65 @@ key_list_config_output =['service','load','output']
 key_list_config_concurrency =['service','load','load-concurrency']
 #keys for changing the autoscaling-dev-target
 key_list_config_target = ['spec', 'template', 'metadata','annotations','autoscaling.knative.dev/target']
+#keys for changing the number of services 
+key_list_ksvc_num = ['service','generate','number']
 
-
-#Change config  output_dir value
+#Change config output_dir value
 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_output,output_dir)
 time.sleep(2)
+#Change target value in config
 add_value_to_deeply_nested_yaml(yaml_file,key_list_config_target,target_env)
 
 
 if(load_env and load_env.lower() == "true"):
     print("Start load phase")
 
-    #For every concurrency step
-    for conc in concurrency_step_list:
-        print( "Set concurrency step to " +conc)
-        add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_concurrency,conc)
-        #export env for kperf-output-file nameing 
-        os.environ['CONCURRENCY_STEP']=conc
+    #For every number of services to be generated:
+    for ksvc_num in service_num_step_list
+        print("Set service num step to "+ksvc_num)
+        add_value_to_deeply_nested_yaml(kperf_config_file,key_list_ksvc_num,ksvc_num)
+        #export env for number of ksvc-s
+        os.environ['NUM_OF_KSVCs']= ksvc_num
         time.sleep(4)
 
-
-        #For every runtime retrive metrics for loading
-        for st in list_cont_runtime:
-            print("Load with "+st)
+        #For every concurrency step
+        for conc in concurrency_step_list:
+            print( "Set concurrency step to " +conc)
+            add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_concurrency,conc)
             #export env for kperf-output-file nameing 
-            if(st == ""):
-                os.environ['CONT_RUNTIME'] = "generic"
-                #Change service's yaml based on runtime
-                delete_line_from_deeply_nested_yaml(yaml_file, key_list_service)
-
-            else:
-                os.environ['CONT_RUNTIME'] = st
-                #Change service's yaml based on runtime
-                add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)
+            os.environ['CONCURRENCY_STEP']=conc
+            time.sleep(4)
 
 
+            #For every runtime retrive metrics for loading
+            for st in list_cont_runtime:
+                print("Load with "+st)
+                #export env for kperf-output-file nameing 
+                if(st == ""):
+                    os.environ['CONT_RUNTIME'] = "generic"
+                    #Change service's yaml based on runtime
+                    delete_line_from_deeply_nested_yaml(yaml_file, key_list_service)
+
+                else:
+                    os.environ['CONT_RUNTIME'] = st
+                    #Change service's yaml based on runtime
+                    add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)
 
 
-            #Create new ns and generate service
-            command_to_run = "kubectl create ns ktest && kperf service generate"
-            execute_and_wait(command_to_run)
-            time.sleep(7)  # Wait for 7 seconds
+                #Create new ns and generate service
+                command_to_run = "kubectl create ns ktest && kperf service generate"
+                execute_and_wait(command_to_run)
+                time.sleep(7)  # Wait for 7 seconds
 
-            #Perform Load-teasting
-            command_to_run = "kperf service load"
-            execute_and_wait(command_to_run)
-            time.sleep(7)  # Wait for 7 seconds
+                #Perform Load-teasting
+                command_to_run = "kperf service load"
+                execute_and_wait(command_to_run)
+                time.sleep(7)  # Wait for 7 seconds
 
-            #Delete ns
-            command_to_run = "kubectl delete ns ktest"
-            execute_and_wait(command_to_run)
-            time.sleep(7)  # Wait for 7 seconds
+                #Delete ns
+                command_to_run = "kubectl delete ns ktest"
+                execute_and_wait(command_to_run)
+                time.sleep(7)  # Wait for 7 seconds
 
 
 if (scale_env and scale_env.lower() == "true"):
@@ -219,7 +226,6 @@ if (scale_env and scale_env.lower() == "true"):
             os.environ['CONT_RUNTIME'] = st
             #Change service's yaml based on runtime
             add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)            
-
 
 
         #Create new ns and generate service
