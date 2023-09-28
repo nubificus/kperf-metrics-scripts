@@ -167,19 +167,19 @@ if(load_env and load_env.lower() == "true"):
     print("Start load phase")
 
     #For every number of services to be generated:
-    for ksvc_num in service_num_step_list
+    for ksvc_num in service_num_step_list:
         print("Set service num step to "+ksvc_num)
         add_value_to_deeply_nested_yaml(kperf_config_file,key_list_ksvc_num,ksvc_num)
         #export env for number of ksvc-s
         os.environ['NUM_OF_KSVCs']= ksvc_num
         time.sleep(4)
 
-        if(len(key_list_ksvc_num)> 1 ){
+        if(len(key_list_ksvc_num)> 1 ):
             largest_num_of_range = ksvc_num
             print("Set range in load section ..load range 0,"+largest_num_of_range-1)
             add_value_to_deeply_nested_yaml(kperf_config_file,key_list_load_ksvc_range,"0,"+largest_num_of_range)
             time.sleep(4)
-        }
+        
         
 
         #For every concurrency step
