@@ -1,8 +1,14 @@
 import pandas as pd
 import os
 
+#A scrpit to "groupby"
+#the output csv's 
+#of the extact load-values 
+# scipts.
+
+
 # Read the CSV file
-input_csv_path = '/home/plakic/playground/nubificus/kperf-metrics-scripts/csv-metrics/load-metrics-target-1.csv'  # Specify the path to your input CSV file
+input_csv_path = '/home/plakic/playground/nubificus/kperf-metrics-scripts/csv-metrics/load-output.csv'  # Specify the path to your input CSV file
 output_dir = '/home/plakic/playground/nubificus/kperf-metrics-scripts/csv-metrics'  # Specify the directory where grouped CSV files will be saved
 
 
