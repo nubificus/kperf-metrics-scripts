@@ -4,8 +4,8 @@ import csv
 
 #A script responsible for collecting and re-representing
 #the output of kperf's load test.
-#The resault csv will contain metrics such as 
-#Slowest,Fastest and averge response times as well
+#The result csv will contain metrics such as 
+#Slowest,Fastest and average response times as well
 #as the error response number
 
 def extract_values_from_file(file_path):

@@ -152,8 +152,11 @@ key_list_config_concurrency =['service','load','load-concurrency']
 key_list_config_target = ['spec', 'template', 'metadata','annotations','autoscaling.knative.dev/target']
 #keys for changing the number of services 
 key_list_ksvc_num = ['service','generate','number']
-#keys for changing the range of affected services
+#keys for changing the load-range of affected services
 key_list_load_ksvc_range = ['service','load','range']
+#keys for changing the scale-range of affected services
+key_list_scale_ksvc_range = ['service','scale','range']
+
 
 #Change config output_dir value
 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_output,output_dir)
@@ -230,43 +233,65 @@ if(load_env and load_env.lower() == "true"):
 if (scale_env and scale_env.lower() == "true"):
     print("Start scale phase")
 
-    #for every runtime retrive metrics for loading
-    for st in list_cont_runtime:
-        print("Scale with "+st)
 
-        #export env for kperf-output-file nameing 
-        if(st == ""):
-            os.environ['CONT_RUNTIME'] = "generic"
-            delete_line_from_deeply_nested_yaml(yaml_file, key_list_service)
-        else:
-            os.environ['CONT_RUNTIME'] = st
-            #Change service's yaml based on runtime
-            add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)            
+    #For every number of services to be generated:
+    for ksvc_num in services_num_list:
+        print("Set service num step to "+ksvc_num)
+        add_value_to_deeply_nested_yaml(kperf_config_file,key_list_ksvc_num,ksvc_num)
+        #export env for number of ksvc-s
+        os.environ['NUM_OF_KSVCs']= ksvc_num
+        time.sleep(4)
+
+        if(len(services_num_list)> 1 ):
+            largest_num_of_range = ksvc_num
+            if(int(ksvc_num)!=1): 
+                print("Set range in scale section ..scale range 0,"+str(int(largest_num_of_range)-1))
+                add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,"+str(int(largest_num_of_range)-1))
+                time.sleep(4)
+            else:
+                print("Set range in scale section ..scale range 0,1)")
+                add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,1")
+                time.sleep(4)
+        
 
 
-        #Create new ns and generate service
-        command_to_run = "kubectl create ns ktest && kperf service generate"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
+        #for every runtime retrieve metrics for loading
+        for st in list_cont_runtime:
+            print("Scale with "+st)
 
-        #Perform scale-teasting
-        command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system   kperf service scale --namespace ktest --svc-prefix ktest --range 0,1  --verbose --output "+ output_dir + " -i 35 -T 70s -s 10s"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
+            #export env for kperf-output-file naming 
+            if(st == ""):
+                os.environ['CONT_RUNTIME'] = "generic"
+                delete_line_from_deeply_nested_yaml(yaml_file, key_list_service)
+            else:
+                os.environ['CONT_RUNTIME'] = st
+                #Change service's yaml based on runtime
+                add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)            
 
-        #Delete ns
-        command_to_run = "kubectl delete ns ktest"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
+
+            #Create new ns and generate service
+            command_to_run = "kubectl create ns ktest && kperf service generate"
+            execute_and_wait(command_to_run)
+            time.sleep(7)  # Wait for 7 seconds
+
+            #Perform scale-testing
+            command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system   kperf service scale"
+            execute_and_wait(command_to_run)
+            time.sleep(7)  # Wait for 7 seconds
+
+            #Delete ns
+            command_to_run = "kubectl delete ns ktest"
+            execute_and_wait(command_to_run)
+            time.sleep(7)  # Wait for 7 seconds
 
 if (fmnp_env and fmnp_env.lower() == "true"):
     print("Start fmnp phase")
 
-    #for every runtime retrive metrics for fnmp
+    #for every runtime retrieve metrics for fnmp
     for st in list_cont_runtime:
         print("Find max-num-pods with "+st)
 
-        #export env for kperf-output-file nameing 
+        #export env for kperf-output-file naming 
         if(st == ""):
             os.environ['CONT_RUNTIME'] = "generic"
         else:
