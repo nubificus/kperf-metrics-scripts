@@ -177,7 +177,7 @@ if(load_env and load_env.lower() == "true"):
         os.environ['NUM_OF_KSVCs']= ksvc_num
         time.sleep(4)
 
-        if(len(services_num_list)> 1 ):
+        if(len(services_num_list)>= 1 ):
             largest_num_of_range = ksvc_num
             if(int(ksvc_num)!=1): 
                 print("Set range in load section ..load range 0,"+str(int(largest_num_of_range)-1))
@@ -242,7 +242,7 @@ if (scale_env and scale_env.lower() == "true"):
         os.environ['NUM_OF_KSVCs']= ksvc_num
         time.sleep(4)
 
-        if(len(services_num_list)> 1 ):
+        if(len(services_num_list)>= 1 ):
             largest_num_of_range = ksvc_num
             if(int(ksvc_num)!=1): 
                 print("Set range in scale section ..scale range 0,"+str(int(largest_num_of_range)-1))
