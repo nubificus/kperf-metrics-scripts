@@ -7,3 +7,4 @@ export LOAD_TESTING_BOOL=True
 export SCALE_TESTING_BOOL=False
 export FMNP_TESTING_BOOL=False
 export CSV_RES_DIR=/home/iplakas/results-automated-script
+export SCALE_CLIENT_TIMEOUT=15s
