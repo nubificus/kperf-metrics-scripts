@@ -49,21 +49,31 @@ def read_and_print_yaml(yaml_file):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
-#Function to execute shell commands 
+
+def sanitize_filename(filename):
+    # Remove characters that are not safe for filenames
+    return re.sub(r'[^\w-]', '_', filename)
+
+#Function to execute commands
 def execute_and_wait(command):
+    # Sanitize the command to create a safe filename
+    sanitized_command = sanitize_filename(command)
+
+    # Create a timestamp to make the file name unique
+    timestamp = int(time.time())
+
+    # Combine the sanitized command and timestamp to create a unique file name
+    output_filename = f'/tmp/output_{sanitized_command}_{timestamp}.log'
     try:
-        completed_process = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        
-        # Print the command's exit status
-        print(f"Command exit code: {completed_process.returncode}")
+        with open(output_filename, 'w') as log_file:
+            completed_process = subprocess.run(command, shell=True, check=True, stdout=log_file, stderr=log_file, text=True)
 
-        # Print the command's standard output (stdout)
-        print("Command output:")
-        print(completed_process.stdout)
+        # Print the standard output and standard error to the console (stdout)
+        print("Standard Output and Standard Error:")
+        with open(output_filename, 'r') as log_file:
+            for line in log_file:
+                print(line, end='')
 
-        # Print the command's standard error (stderr)
-        print("Command error (if any):")
-        print(completed_process.stderr)
     except subprocess.CalledProcessError as e:
         print(f"Error executing the command: {e}")
     except Exception as e:
@@ -194,7 +204,7 @@ if(load_env and load_env.lower() == "true"):
         for conc in concurrency_step_list:
             print( "Set concurrency step to " +conc)
             add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_concurrency,conc)
-            #export env for kperf-output-file nameing 
+            #export env for kperf-output-file naming 
             os.environ['CONCURRENCY_STEP']=conc
             time.sleep(4)
 
@@ -217,16 +227,19 @@ if(load_env and load_env.lower() == "true"):
                 #Create new ns and generate service
                 command_to_run = "kubectl create ns ktest && kperf service generate"
                 execute_and_wait(command_to_run)
+                print("Executeted \"create ns and kperf service generation\" ")
                 time.sleep(7)  # Wait for 7 seconds
 
                 #Perform Load-teasting
                 command_to_run = "kperf service load"
                 execute_and_wait(command_to_run)
+                print("Executeted \"kperf service load\" ")
                 time.sleep(7)  # Wait for 7 seconds
 
                 #Delete ns
                 command_to_run = "kubectl delete ns ktest"
                 execute_and_wait(command_to_run)
+                print("Executeted \"delete ns\" ")
                 time.sleep(7)  # Wait for 7 seconds
 
 
@@ -272,16 +285,19 @@ if (scale_env and scale_env.lower() == "true"):
             #Create new ns and generate service
             command_to_run = "kubectl create ns ktest && kperf service generate"
             execute_and_wait(command_to_run)
+            print("Executeted \"create ns and kperf service generation\" ")
             time.sleep(7)  # Wait for 7 seconds
 
             #Perform scale-testing
             command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system   kperf service scale"
             execute_and_wait(command_to_run)
+            print("Executeted \"kperf service scale\" ")
             time.sleep(7)  # Wait for 7 seconds
 
             #Delete ns
             command_to_run = "kubectl delete ns ktest"
             execute_and_wait(command_to_run)
+            print("Executeted \"kperf delete ns ktest\" ")
             time.sleep(7)  # Wait for 7 seconds
 
 if (fmnp_env and fmnp_env.lower() == "true"):
