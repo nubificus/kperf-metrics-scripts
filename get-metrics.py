@@ -2,7 +2,9 @@ import yaml
 import subprocess
 import os
 import time
-
+import re
+import csv
+from collections import defaultdict
 
 """
 A script that based on env
@@ -22,12 +24,13 @@ output_dir = os.environ.get('OUTPUT_DIR')
 load_env = os.environ.get('LOAD_TESTING_BOOL')
 #Bool to enable scale tests
 scale_env = os.environ.get('SCALE_TESTING_BOOL')
-#Bool to enable find-max-num-of-pods tests
-fmnp_env = os.environ.get('FMNP_TESTING_BOOL')
-#Env responsible for setting the target(concurrency limit)
-#of each pod
+#Bool to enable find-average-num-of-services(FANS) respond tests
+fans_env = os.environ.get('FANS_TESTING_BOOL')
+#Get number of iterations for FANS-tests
+fans_iterations_env = os.environ.get('FANS_ITERATIONS')
+#Env responsible for setting the target
+# (concurrency limit) of each pod
 target_env = os.environ.get('KSERVICE_TARGET')
-
 
 #Print envs
 print("SERVICE_YAML:", service_yaml_file)
@@ -35,8 +38,37 @@ print("KPERF_CONFIG:", kperf_config_file)
 print("OUTPUT_DIR:", output_dir)
 print("LOAD_TESTING_BOOL:", load_env)
 print("SCALE_TESTING_BOOL:", scale_env)
-print("FMNP_TESTING_BOOL:", fmnp_env)
+print("FMNP_TESTING_BOOL:", fans_env)
 print("KSERVICE_TARGET:", target_env)
+print("FANS_ITERATIONS:",fans_iterations_env)
+
+#Check fans iterations
+if fans_iterations_env is not None and fans_iterations_env.isdigit():
+    fans_iterations = int(fans_iterations_env)
+
+#A function to count average number of csv-lines per subfolder
+def count_lines_in_csv_files(folder_path):
+    subfolder_averages = defaultdict(list)
+
+    # Loop through all the files and subfolders in the specified folder
+    for item in os.listdir(folder_path):
+        item_path = os.path.join(folder_path, item)
+
+        if os.path.isfile(item_path) and item.endswith('.csv'):
+            total_lines = 0
+            num_files = 0
+            with open(item_path, 'r', newline='') as csv_file:
+                csv_reader = csv.reader(csv_file)
+                num_lines = sum(1 for row in csv_reader)-1
+                total_lines += num_lines
+                num_files += 1
+            if num_files > 0:
+                subfolder_averages[folder_path].append(total_lines / num_files)
+        elif os.path.isdir(item_path):
+            subfolder_averages.update(count_lines_in_csv_files(item_path))
+
+    return subfolder_averages
+
 
 #A function that reads and print yaml files
 def read_and_print_yaml(yaml_file):
@@ -137,13 +169,17 @@ def add_value_to_deeply_nested_yaml(yaml_file, keys, value):
         print(f"An error occurred: {str(e)}")
 
 #List of concurrency step
-concurrency_step_list = ["1","20","40","60","80","100"]
+#concurrency_step_list = ["1","20","40","60","80","100"]
+concurrency_step_list = ["1"]
 
 #List of number of services
-services_num_list =["1","20","40","60","80","100"]
+#services_num_list =["1","20","40","60","80","100"]
+services_num_list =["100"]
 
 #List of container-runtimes
-list_cont_runtime = ["","kata-qemu","kata-fc","kata-rs","kata-clh","urunc","gvisor"]
+#list_cont_runtime = ["","kata-qemu","kata-fc","kata-rs","kata-clh","urunc","gvisor"]
+list_cont_runtime = ["urunc"]
+
 
 print(list_cont_runtime)
 
@@ -154,8 +190,10 @@ read_and_print_yaml(yaml_file)
 
 #keys for changing runtime in service yaml
 key_list_service = ['spec','template','spec','runtimeClassName']
-#keys for changing output dir in config yaml
-key_list_config_output =['service','load','output']
+#keys for changing load-output dir in config yaml
+key_list_load_config_output =['service','load','output']
+#keys for changing scale-output dir in config yaml
+key_list_scale_config_output =['service','scale','output']
 #keys for changing concurrency output
 key_list_config_concurrency =['service','load','load-concurrency']
 #keys for changing the autoscaling-dev-target
@@ -168,8 +206,10 @@ key_list_load_ksvc_range = ['service','load','range']
 key_list_scale_ksvc_range = ['service','scale','range']
 
 
-#Change config output_dir value
-add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_output,output_dir)
+#Change config output_dir  value for load
+add_value_to_deeply_nested_yaml(kperf_config_file,key_list_load_config_output,output_dir)
+time.sleep(2)
+add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_config_output,output_dir)
 time.sleep(2)
 #Change target value in config
 add_value_to_deeply_nested_yaml(yaml_file,key_list_config_target,target_env)
@@ -300,34 +340,125 @@ if (scale_env and scale_env.lower() == "true"):
             print("Executeted \"kperf delete ns ktest\" ")
             time.sleep(7)  # Wait for 7 seconds
 
-if (fmnp_env and fmnp_env.lower() == "true"):
-    print("Start fmnp phase")
 
-    #for every runtime retrieve metrics for fnmp
-    for st in list_cont_runtime:
-        print("Find max-num-pods with "+st)
+# Find the average number of services respond
+if (fans_env and fans_env.lower() == "true"):
+    print("Find average-number-of-services-respond phase")
 
-        #export env for kperf-output-file naming 
-        if(st == ""):
-            os.environ['CONT_RUNTIME'] = "generic"
+    # Define the parent directory path
+    parent_dir = output_dir
+
+    # Define the name of the new directory you want to create
+    new_dir_name = "fans-test"
+
+    # Create the full path for the new directory
+    fans_tests_path = os.path.join(parent_dir, new_dir_name)
+
+    # Check if the parent directory exists, and create the new directory if it doesn't
+    if not os.path.exists(fans_tests_path):
+        os.makedirs(fans_tests_path)
+        print(f"Directory '{new_dir_name}' created inside '{parent_dir}'.")
+    else:
+        print(f"Directory '{new_dir_name}' already exists inside '{parent_dir}'.")
+    
+
+    #Start iterating
+    for i in range(fans_iterations):
+        print(f"Iteration {i + 1}")
+
+        #For every number of services to be generated:
+        for ksvc_num in services_num_list:
+            print("Set service num step to "+ksvc_num)
+            add_value_to_deeply_nested_yaml(kperf_config_file,key_list_ksvc_num,ksvc_num)
+            #export env for number of ksvc-s
+            os.environ['NUM_OF_KSVCs']= ksvc_num
+            time.sleep(4)
+
+            if(len(services_num_list)>= 1 ):
+                largest_num_of_range = ksvc_num
+                if(int(ksvc_num)!=1): 
+                    print("Set range in scale section ..scale range 0,"+str(int(largest_num_of_range)-1))
+                    add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,"+str(int(largest_num_of_range)-1))
+                    time.sleep(4)
+                else:
+                    print("Set range in scale section ..scale range 0,1)")
+                    add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,1")
+                    time.sleep(4)
+            
+            #for every runtime retrieve metrics for loading
+            for st in list_cont_runtime:
+                print("Scale with "+st)
+
+                #export env for kperf-output-file naming 
+                if(st == ""):
+                    os.environ['CONT_RUNTIME'] = "generic"
+                    delete_line_from_deeply_nested_yaml(yaml_file, key_list_service)
+                else:
+                    os.environ['CONT_RUNTIME'] = st
+                    #Change service's yaml based on runtime
+                    add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)            
+
+                #Create new-subdir for every ...
+                # Define the parent directory path
+                parent_dir = fans_tests_path
+
+                # Define the name of the new directory you want to create
+                new_dir_name = "cont_runtime_"+st+"_num_of_services_"+ksvc_num
+
+                # Create the full path for the new directory
+                fans_cont_range_sub_path = os.path.join(parent_dir, new_dir_name)
+
+                # Check if the parent directory exists, and create the new directory if it doesn't
+                if not os.path.exists(fans_cont_range_sub_path):
+                    os.makedirs(fans_cont_range_sub_path)
+                    print(f"Directory '{new_dir_name}' created inside '{parent_dir}'.")
+                else:
+                    print(f"Directory '{new_dir_name}' already exists inside '{parent_dir}'.")
+
+
+                #Change config output_dir value
+                add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_config_output,fans_cont_range_sub_path)
+                time.sleep(2)            
+
+                #Create new ns and generate service
+                command_to_run = "kubectl create ns ktest && kperf service generate"
+                execute_and_wait(command_to_run)
+                print("Executeted \"create ns and kperf service generation\" ")
+                time.sleep(7)  # Wait for 7 seconds
+
+                #Perform scale-testing
+                command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service scale"
+                execute_and_wait(command_to_run)
+                print("Executeted \"kperf service scale\" ")
+                time.sleep(7)  # Wait for 7 seconds
+
+                #Delete ns
+                command_to_run = "kubectl delete ns ktest"
+                execute_and_wait(command_to_run)
+                print("Executeted \"kperf delete ns ktest\" ")
+                time.sleep(7)  # Wait for 7 seconds
+
+
+parent_folder =   fans_tests_path
+output_file = fans_tests_path+"/"+'output.txt'  
+
+subfolder_averages = count_lines_in_csv_files(parent_folder)
+
+# Calculate the average for each subfolder
+# Write the output to a file
+with open(output_file, 'w') as output:
+    for folder, averages in subfolder_averages.items():
+        output.write(f"Subfolder: {folder}\n")
+        if averages:
+            average_lines = sum(averages) / len(averages)
+            output.write(f"Total lines across {len(averages)} CSV files: {sum(averages)}\n")
+            output.write(f"Average lines per CSV file: {average_lines:.2f}\n\n")
+            print(f"Subfolder: {folder}")
+            print(f"Total lines across {len(averages)} CSV files: {sum(averages)}")
+            print(f"Average lines per CSV file: {average_lines:.2f}\n")
         else:
-            os.environ['CONT_RUNTIME'] = st
-
-        #Change service's yaml based on runtime
-        add_value_to_deeply_nested_yaml(yaml_file, key_list_service, st)
+            output.write(f"No CSV files found in subfolder: {folder}\n\n")
+            print(f"No CSV files found in subfolder: {folder}\n")        
 
 
-        #Create new ns and generate service
-        command_to_run = "kubectl create ns ktest && kperf service generate"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
-
-        #Perform fnmp-teasting
-        command_to_run = "kperf service fnmp"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
-
-        #Delete ns
-        command_to_run = "kubectl delete ns ktest"
-        execute_and_wait(command_to_run)
-        time.sleep(7)  # Wait for 7 seconds
+print("Output has been written to", output_file)
