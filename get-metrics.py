@@ -204,13 +204,6 @@ key_list_ksvc_num = ['service','generate','number']
 key_list_load_ksvc_range = ['service','load','range']
 #keys for changing the scale-range of affected services
 key_list_scale_ksvc_range = ['service','scale','range']
-#key for changing the generate.template value in config 
-key_list_generte_config_template=['service','generate','template']
-
-#Change kperf's config generate.template value
-add_value_to_deeply_nested_yaml(kperf_config_file,key_list_generte_config_template,yaml_file)
-time.sleep(2)
-
 
 
 #Change config output_dir  value for load
@@ -468,4 +461,4 @@ if (fans_env and fans_env.lower() == "true"):
                 print(f"No CSV files found in subfolder: {folder}\n")        
 
 
-    print("Output has been written to", output_file)
+        print("Output has been written to", output_file)
