@@ -204,6 +204,13 @@ key_list_ksvc_num = ['service','generate','number']
 key_list_load_ksvc_range = ['service','load','range']
 #keys for changing the scale-range of affected services
 key_list_scale_ksvc_range = ['service','scale','range']
+#key for changing the generate.template value in config 
+key_list_generte_config_template=['service','generate','template']
+
+#Change kperf's config generate.template value
+add_value_to_deeply_nested_yaml(kperf_config_file,key_list_generte_config_template,yaml_file)
+time.sleep(2)
+
 
 
 #Change config output_dir  value for load
@@ -439,26 +446,26 @@ if (fans_env and fans_env.lower() == "true"):
                 time.sleep(7)  # Wait for 7 seconds
 
 
-parent_folder =   fans_tests_path
-output_file = fans_tests_path+"/"+'output.txt'  
+    parent_folder =   fans_tests_path
+    output_file = fans_tests_path+"/"+'output.txt'  
 
-subfolder_averages = count_lines_in_csv_files(parent_folder)
+    subfolder_averages = count_lines_in_csv_files(parent_folder)
 
-# Calculate the average for each subfolder
-# Write the output to a file
-with open(output_file, 'w') as output:
-    for folder, averages in subfolder_averages.items():
-        output.write(f"Subfolder: {folder}\n")
-        if averages:
-            average_lines = sum(averages) / len(averages)
-            output.write(f"Total lines across {len(averages)} CSV files: {sum(averages)}\n")
-            output.write(f"Average lines per CSV file: {average_lines:.2f}\n\n")
-            print(f"Subfolder: {folder}")
-            print(f"Total lines across {len(averages)} CSV files: {sum(averages)}")
-            print(f"Average lines per CSV file: {average_lines:.2f}\n")
-        else:
-            output.write(f"No CSV files found in subfolder: {folder}\n\n")
-            print(f"No CSV files found in subfolder: {folder}\n")        
+    # Calculate the average for each subfolder
+    # Write the output to a file
+    with open(output_file, 'w') as output:
+        for folder, averages in subfolder_averages.items():
+            output.write(f"Subfolder: {folder}\n")
+            if averages:
+                average_lines = sum(averages) / len(averages)
+                output.write(f"Total lines across {len(averages)} CSV files: {sum(averages)}\n")
+                output.write(f"Average lines per CSV file: {average_lines:.2f}\n\n")
+                print(f"Subfolder: {folder}")
+                print(f"Total lines across {len(averages)} CSV files: {sum(averages)}")
+                print(f"Average lines per CSV file: {average_lines:.2f}\n")
+            else:
+                output.write(f"No CSV files found in subfolder: {folder}\n\n")
+                print(f"No CSV files found in subfolder: {folder}\n")        
 
 
 print("Output has been written to", output_file)
