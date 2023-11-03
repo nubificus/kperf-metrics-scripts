@@ -10,3 +10,4 @@ export FANS_TESTING_BOOL=True
 export CSV_RES_DIR=/home/iplakas/results-automated-script
 export KSERVICE_TARGET=10
 export FANS_ITERATIONS=1
+export FANS_TESTING_GET_AVG_BOOL=True

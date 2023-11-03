@@ -5,6 +5,8 @@ import time
 import re
 import csv
 from collections import defaultdict
+import pandas as pd
+
 
 """
 A script that based on env
@@ -31,6 +33,9 @@ fans_iterations_env = os.environ.get('FANS_ITERATIONS')
 #Env responsible for setting the target
 # (concurrency limit) of each pod
 target_env = os.environ.get('KSERVICE_TARGET')
+#Bool to get averge of averages of services in 
+#fans-test
+get_avg_env = os.environ.get('FANS_TESTING_GET_AVG_BOOL')
 
 #Print envs
 print("SERVICE_YAML:", service_yaml_file)
@@ -41,6 +46,7 @@ print("SCALE_TESTING_BOOL:", scale_env)
 print("FMNP_TESTING_BOOL:", fans_env)
 print("KSERVICE_TARGET:", target_env)
 print("FANS_ITERATIONS:",fans_iterations_env)
+print("FANS_TESTING_GET_AVG_BOOL:",get_avg_env)
 
 #Check fans iterations
 if fans_iterations_env is not None and fans_iterations_env.isdigit():
@@ -140,9 +146,9 @@ def delete_line_from_deeply_nested_yaml(yaml_file, keys):
 
 
 
-#A function responsible for changing yaml value
-#based on the list of "keys"
-#e.g spec.template.spec.runtimeClassName="kata"
+# A function responsible for changing yaml value
+# based on the list of "keys"
+# e.g spec.template.spec.runtimeClassName="kata"
 def add_value_to_deeply_nested_yaml(yaml_file, keys, value):
     try:
         with open(yaml_file, 'r') as file:
@@ -167,6 +173,52 @@ def add_value_to_deeply_nested_yaml(yaml_file, keys, value):
         print(f"The file '{yaml_file}' was not found.")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
+
+# Get avgerage os svc latencies per
+# subfolder ... e.g subfolder cont_runtime_kata-fc_num_of_services_20
+# containes mutiple csvs, one for each iteration,
+# for each csv get average latency of services and
+# then the average of average latencies
+def get_avg_of_svc_lat_per_subfolder(parent_dir):
+# Parent directory where subdirectories are located
+    parent_directory = parent_dir
+
+    # Define the pattern to match subdirectory names
+    # Define the regex pattern to match subdirectory names
+    pattern = r"cont_runtime_.*_num_of_services_.*"
+
+    # Initialize variables to store the averages
+    service_averages = {}
+    subfolder_averages = []
+
+    # List subdirectories matching the regex pattern
+    matching_subdirectories = [d for d in os.listdir(parent_directory) if os.path.isdir(os.path.join(parent_directory, d)) and re.match(pattern, d)]
+
+    print(matching_subdirectories)
+    # Iterate through matching subdirectories
+    for subfolder in matching_subdirectories:
+        subfolder_path = os.path.join(parent_directory, subfolder)
+        
+        # Collect and calculate the averages for each subfolder
+        subfolder_averages_temp = []
+        
+        for filename in os.listdir(subfolder_path):
+            if filename.endswith(".csv"):
+                file_path = os.path.join(subfolder_path, filename)
+                df = pd.read_csv(file_path)
+                svc_avg = df['svc_latency_avg'].mean()
+                subfolder_averages_temp.append(svc_avg)
+        
+        if subfolder_averages_temp:
+            subfolder_average = sum(subfolder_averages_temp) / len(subfolder_averages_temp)
+            str_num = str(len(subfolder_averages_temp))
+            print("Subfolder "+subfolder+" has average "+ str(subfolder_average) + " for "+str_num+" subfolders")
+            subfolder_averages.append(subfolder_average)
+
+            # Write subfolder_average to a file
+            output_file = os.path.join(subfolder_path, subfolder + "_average.txt")
+            with open(output_file, "w") as f:
+                f.write("Subfolder " + subfolder + " has average " + str(subfolder_average))
 
 #List of concurrency step
 #concurrency_step_list = ["1","20","40","60","80","100"]
@@ -439,7 +491,7 @@ if (fans_env and fans_env.lower() == "true"):
                 time.sleep(7)  # Wait for 7 seconds
 
 
-    parent_folder =   fans_tests_path
+    parent_folder = fans_tests_path
     output_file = fans_tests_path+"/"+'output.txt'  
 
     subfolder_averages = count_lines_in_csv_files(parent_folder)
@@ -460,5 +512,7 @@ if (fans_env and fans_env.lower() == "true"):
                 output.write(f"No CSV files found in subfolder: {folder}\n\n")
                 print(f"No CSV files found in subfolder: {folder}\n")        
 
-
         print("Output has been written to", output_file)
+
+    if (get_avg_env):
+        get_avg_of_svc_lat_per_subfolder(fans_tests_path)
