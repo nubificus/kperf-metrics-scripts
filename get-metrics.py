@@ -226,12 +226,18 @@ concurrency_step_list = ["1"]
 
 #List of number of services
 #services_num_list =["1","20","40","60","80","100"]
-services_num_list =["100"]
+#services_num_list =["25","50","75","100","125"]
+#services_num_list =["100"]
+#services_num_list =["500"]
+services_num_list =["25","50","75","100","125"]
 
 #List of container-runtimes
 #list_cont_runtime = ["","kata-qemu","kata-fc","kata-rs","kata-clh","urunc","gvisor"]
-list_cont_runtime = ["urunc"]
+#list_cont_runtime = ["","kata-qemu","kata-fc","gvisor"]
+#list_cont_runtime=["","kata-qemu","gvisor","kata-fc"]
 
+#list_cont_runtime = ["urunc"]
+list_cont_runtime = ["kata-rs","kata-clh"]
 
 print(list_cont_runtime)
 
@@ -317,13 +323,13 @@ if(load_env and load_env.lower() == "true"):
 
 
                 #Create new ns and generate service
-                command_to_run = "kubectl create ns ktest && kperf service generate"
+                command_to_run = "kubectl create ns ktest &&  taskset -c 0,32,1,33,2,34,3,35 kperf service generate"
                 execute_and_wait(command_to_run)
                 print("Executeted \"create ns and kperf service generation\" ")
                 time.sleep(7)  # Wait for 7 seconds
 
                 #Perform Load-teasting
-                command_to_run = "kperf service load"
+                command_to_run = "taskset -c  0,32,1,33,2,34,3,35 kperf service load"
                 execute_and_wait(command_to_run)
                 print("Executeted \"kperf service load\" ")
                 time.sleep(7)  # Wait for 7 seconds
@@ -375,13 +381,13 @@ if (scale_env and scale_env.lower() == "true"):
 
 
             #Create new ns and generate service
-            command_to_run = "kubectl create ns ktest && kperf service generate"
+            command_to_run = "kubectl create ns ktest && taskset -c 0,32,1,33,2,34,3,35 kperf service generate"
             execute_and_wait(command_to_run)
             print("Executeted \"create ns and kperf service generation\" ")
             time.sleep(7)  # Wait for 7 seconds
 
             #Perform scale-testing
-            command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system   kperf service scale"
+            command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system  taskset -c 0,32,1,33,2,34,3,35 kperf service scale"
             execute_and_wait(command_to_run)
             print("Executeted \"kperf service scale\" ")
             time.sleep(7)  # Wait for 7 seconds
@@ -454,7 +460,7 @@ if (fans_env and fans_env.lower() == "true"):
                 # Define the parent directory path
                 parent_dir = fans_tests_path
 
-                # Define the name of the new directory you want to create
+                # Defin the name of the new directory you want to create
                 new_dir_name = "cont_runtime_"+st+"_num_of_services_"+ksvc_num
 
                 # Create the full path for the new directory
@@ -473,13 +479,13 @@ if (fans_env and fans_env.lower() == "true"):
                 time.sleep(2)            
 
                 #Create new ns and generate service
-                command_to_run = "kubectl create ns ktest && kperf service generate"
+                command_to_run = "kubectl create ns ktest &&  taskset -c 0,32,1,33,2,34,3,35 kperf service generate"
                 execute_and_wait(command_to_run)
                 print("Executeted \"create ns and kperf service generation\" ")
                 time.sleep(7)  # Wait for 7 seconds
 
                 #Perform scale-testing
-                command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service scale"
+                command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system  taskset  -c 0,32,1,33,2,34,3,35 kperf service scale"
                 execute_and_wait(command_to_run)
                 print("Executeted \"kperf service scale\" ")
                 time.sleep(7)  # Wait for 7 seconds
