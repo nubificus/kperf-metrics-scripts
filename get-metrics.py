@@ -262,15 +262,22 @@ key_list_ksvc_num = ['service','generate','number']
 key_list_load_ksvc_range = ['service','load','range']
 #keys for changing the scale-range of affected services
 key_list_scale_ksvc_range = ['service','scale','range']
+#keys for changing the template of generate 
+key_list_ksvc_template = ['service','generate','template']
+
 
 
 #Change config output_dir  value for load
 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_load_config_output,output_dir)
-time.sleep(2)
+time.sleep(0.2)
 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_config_output,output_dir)
-time.sleep(2)
+time.sleep(0.2)
 #Change target value in config
 add_value_to_deeply_nested_yaml(yaml_file,key_list_config_target,target_env)
+time.sleep(0.2)
+#Change service tempalte of config
+add_value_to_deeply_nested_yaml(kperf_config_file,key_list_ksvc_template,yaml_file)
+time.sleep(0.2)
 
 
 
@@ -290,11 +297,11 @@ if(load_env and load_env.lower() == "true"):
             if(int(ksvc_num)!=1): 
                 print("Set range in load section ..load range 0,"+str(int(largest_num_of_range)-1))
                 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_load_ksvc_range,"0,"+str(int(largest_num_of_range)-1))
-                time.sleep(4)
+                time.sleep(0.5)
             else:
                 print("Set range in load section ..load range 0,1)")
                 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_load_ksvc_range,"0,1")
-                time.sleep(4)
+                time.sleep(0.5)
         
         
 
@@ -304,7 +311,7 @@ if(load_env and load_env.lower() == "true"):
             add_value_to_deeply_nested_yaml(kperf_config_file,key_list_config_concurrency,conc)
             #export env for kperf-output-file naming 
             os.environ['CONCURRENCY_STEP']=conc
-            time.sleep(4)
+            time.sleep(0.5)
 
 
             #For every runtime retrive metrics for loading
@@ -326,19 +333,19 @@ if(load_env and load_env.lower() == "true"):
                 command_to_run = "kubectl create ns ktest &&  taskset -c 0,32,1,33,2,34,3,35 kperf service generate"
                 execute_and_wait(command_to_run)
                 print("Executeted \"create ns and kperf service generation\" ")
-                time.sleep(7)  # Wait for 7 seconds
+                time.sleep(5)  # Wait for 7 seconds
 
                 #Perform Load-teasting
                 command_to_run = "taskset -c  0,32,1,33,2,34,3,35 kperf service load"
                 execute_and_wait(command_to_run)
                 print("Executeted \"kperf service load\" ")
-                time.sleep(7)  # Wait for 7 seconds
+                time.sleep(5)  # Wait for 7 seconds
 
                 #Delete ns
                 command_to_run = "kubectl delete ns ktest"
                 execute_and_wait(command_to_run)
                 print("Executeted \"delete ns\" ")
-                time.sleep(7)  # Wait for 7 seconds
+                time.sleep(5)  # Wait for 7 seconds
 
 
 if (scale_env and scale_env.lower() == "true"):
@@ -351,18 +358,18 @@ if (scale_env and scale_env.lower() == "true"):
         add_value_to_deeply_nested_yaml(kperf_config_file,key_list_ksvc_num,ksvc_num)
         #export env for number of ksvc-s
         os.environ['NUM_OF_KSVCs']= ksvc_num
-        time.sleep(4)
+        time.sleep(0.5)
 
         if(len(services_num_list)>= 1 ):
             largest_num_of_range = ksvc_num
             if(int(ksvc_num)!=1): 
                 print("Set range in scale section ..scale range 0,"+str(int(largest_num_of_range)-1))
                 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,"+str(int(largest_num_of_range)-1))
-                time.sleep(4)
+                time.sleep(0.5)
             else:
                 print("Set range in scale section ..scale range 0,1)")
                 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,1")
-                time.sleep(4)
+                time.sleep(0.5)
         
 
 
@@ -384,19 +391,19 @@ if (scale_env and scale_env.lower() == "true"):
             command_to_run = "kubectl create ns ktest && taskset -c 0,32,1,33,2,34,3,35 kperf service generate"
             execute_and_wait(command_to_run)
             print("Executeted \"create ns and kperf service generation\" ")
-            time.sleep(7)  # Wait for 7 seconds
+            time.sleep(5)  # Wait for 7 seconds
 
             #Perform scale-testing
             command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system  taskset -c 0,32,1,33,2,34,3,35 kperf service scale"
             execute_and_wait(command_to_run)
             print("Executeted \"kperf service scale\" ")
-            time.sleep(7)  # Wait for 7 seconds
+            time.sleep(5)  # Wait for 7 seconds
 
             #Delete ns
             command_to_run = "kubectl delete ns ktest"
             execute_and_wait(command_to_run)
             print("Executeted \"kperf delete ns ktest\" ")
-            time.sleep(7)  # Wait for 7 seconds
+            time.sleep(5)  # Wait for 7 seconds
 
 
 # Find the average number of services respond
@@ -430,18 +437,18 @@ if (fans_env and fans_env.lower() == "true"):
             add_value_to_deeply_nested_yaml(kperf_config_file,key_list_ksvc_num,ksvc_num)
             #export env for number of ksvc-s
             os.environ['NUM_OF_KSVCs']= ksvc_num
-            time.sleep(4)
+            time.sleep(0.5)
 
             if(len(services_num_list)>= 1 ):
                 largest_num_of_range = ksvc_num
                 if(int(ksvc_num)!=1): 
                     print("Set range in scale section ..scale range 0,"+str(int(largest_num_of_range)-1))
                     add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,"+str(int(largest_num_of_range)-1))
-                    time.sleep(4)
+                    time.sleep(0.5)
                 else:
                     print("Set range in scale section ..scale range 0,1)")
                     add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_ksvc_range,"0,1")
-                    time.sleep(4)
+                    time.sleep(0.5)
             
             #for every runtime retrieve metrics for loading
             for st in list_cont_runtime:
@@ -476,25 +483,25 @@ if (fans_env and fans_env.lower() == "true"):
 
                 #Change config output_dir value
                 add_value_to_deeply_nested_yaml(kperf_config_file,key_list_scale_config_output,fans_cont_range_sub_path)
-                time.sleep(2)            
+                time.sleep(5)            
 
                 #Create new ns and generate service
                 command_to_run = "kubectl create ns ktest &&  taskset -c 0,32,1,33,2,34,3,35 kperf service generate"
                 execute_and_wait(command_to_run)
                 print("Executeted \"create ns and kperf service generation\" ")
-                time.sleep(7)  # Wait for 7 seconds
+                time.sleep(5)  # Wait for 7 seconds
 
                 #Perform scale-testing
                 command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system  taskset  -c 0,32,1,33,2,34,3,35 kperf service scale"
                 execute_and_wait(command_to_run)
                 print("Executeted \"kperf service scale\" ")
-                time.sleep(7)  # Wait for 7 seconds
+                time.sleep(5)  # Wait for 7 seconds
 
                 #Delete ns
                 command_to_run = "kubectl delete ns ktest"
                 execute_and_wait(command_to_run)
                 print("Executeted \"kperf delete ns ktest\" ")
-                time.sleep(7)  # Wait for 7 seconds
+                time.sleep(5)  # Wait for 7 seconds
 
 
     parent_folder = fans_tests_path
