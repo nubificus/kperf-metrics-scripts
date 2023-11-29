@@ -6,6 +6,8 @@ import re
 import csv
 from collections import defaultdict
 import pandas as pd
+from kubernetes import client, config
+
 
 
 """
@@ -86,7 +88,6 @@ def read_and_print_yaml(yaml_file):
         print(f"The file '{yaml_file}' was not found.")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-
 
 def sanitize_filename(filename):
     # Remove characters that are not safe for filenames
@@ -220,6 +221,43 @@ def get_avg_of_svc_lat_per_subfolder(parent_dir):
             with open(output_file, "w") as f:
                 f.write("Subfolder " + subfolder + " has average " + str(subfolder_average))
 
+#Get nr of ready_ksvc_ in namespace
+def get_ready_ksvc_count(namespace):
+    config.load_kube_config()  # Loads kubeconfig from default location
+
+    v1 = client.CoreV1Api()
+    api = client.CustomObjectsApi()
+
+    ready_count = 0
+
+    try:
+        # Fetching Knative Services (KService) in the specified namespace
+        ks_services = api.list_namespaced_custom_object(
+            "serving.knative.dev", "v1", namespace, "services"
+        )
+
+        # Counting the ready Knative Services
+        for ks_service in ks_services['items']:
+            status = ks_service.get('status', {})
+            conditions = status.get('conditions', [])
+            for condition in conditions:
+                if condition.get('type') == 'Ready' and condition.get('status') == 'True':
+                    ready_count += 1
+
+        return ready_count
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+#namespace_name = 'ktest'
+# ready_count = get_ready_ksvc_count(namespace_name)
+
+# if ready_count is not None:
+#     print(f"Number of ready Knative Services in namespace '{namespace_name}': {ready_count}")
+# else:
+#     print("Failed to retrieve the number of ready Knative Services.")
+
 #List of concurrency step
 #concurrency_step_list = ["1","20","40","60","80","100"]
 concurrency_step_list = ["1"]
@@ -334,6 +372,13 @@ if(load_env and load_env.lower() == "true"):
                 execute_and_wait(command_to_run)
                 print("Executeted \"create ns and kperf service generation\" ")
                 time.sleep(5)  # Wait for 7 seconds
+                #The namespace must be the same as in config
+                count_ready = get_ready_ksvc_count("ktest")
+                while (count_ready != int(ksvc_num)) : 
+                    print("Ready ksvc's :" + str(count_ready))
+                    time.sleep(0.5)
+                    count_ready = get_ready_ksvc_count("ktest")
+            
 
                 #Perform Load-teasting
                 command_to_run = "taskset -c  0,32,1,33,2,34,3,35 kperf service load"
@@ -392,6 +437,12 @@ if (scale_env and scale_env.lower() == "true"):
             execute_and_wait(command_to_run)
             print("Executeted \"create ns and kperf service generation\" ")
             time.sleep(5)  # Wait for 7 seconds
+            count_ready = get_ready_ksvc_count("ktest")
+            while (count_ready != int(ksvc_num)) :
+                print("Ready ksvc's :" + str(count_ready))
+                time.sleep(0.5)
+                count_ready = get_ready_ksvc_count("ktest")
+
 
             #Perform scale-testing
             command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system  taskset -c 0,32,1,33,2,34,3,35 kperf service scale"
@@ -490,6 +541,11 @@ if (fans_env and fans_env.lower() == "true"):
                 execute_and_wait(command_to_run)
                 print("Executeted \"create ns and kperf service generation\" ")
                 time.sleep(5)  # Wait for 7 seconds
+                count_ready = get_ready_ksvc_count("ktest")
+                while (count_ready != int(ksvc_num)) : 
+                    print("Ready ksvc's :" + str(count_ready))
+                    time.sleep(0.5)
+                    count_ready = get_ready_ksvc_count("ktest")
 
                 #Perform scale-testing
                 command_to_run = "GATEWAY_OVERRIDE=kourier-internal GATEWAY_NAMESPACE_OVERRIDE=kourier-system  taskset  -c 0,32,1,33,2,34,3,35 kperf service scale"
