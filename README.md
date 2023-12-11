@@ -33,4 +33,4 @@ This script is designed to facilitate Knative performance testing by updating co
 ### Important Notes
 - Modify environmental variables and functions' parameters before executing to suit the testing requirements.
 - Be cautious with file paths and configurations.
-- Check the generated output files and directories as the script performs various operations that may create new files or directories.
+- Check the generated output files and directories as the script performs  operations that may create new files or directories.
